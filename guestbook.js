@@ -1,4 +1,4 @@
-const scriptURL = 'https://script.google.com/macros/s/AKfycbz8onyxhjYYf8HocUCED87IuoRy-LFgKDJaoqpDKxiDUzXrmL27JIM8Po57xam7XuEL/exec'
+const scriptURL = 'https://script.google.com/macros/s/AKfycbybxbpae6ArIrdJVycN5AVf8bH8Ofh-EHMNZTOifcfzoGAhJi3-HZpwwlK6gcR3gxSYfQ/exec'
 
 const form = document.forms['guestbook-form']
 
