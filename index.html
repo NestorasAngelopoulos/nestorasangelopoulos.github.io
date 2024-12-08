@@ -5,31 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Under Construction</title>
     <link rel="stylesheet" href="styles.css">
-    <style>
-      body {
-        margin: 0;
-      }
-    </style>
     <script type="importmap">
 			{
 				"imports": {
-					"three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
-          "jsm/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
-        }
+					"three": "./three/build/three.module.js",
+          "jsm/": "./three/examples/jsm/",
+					"three/addons/": "./three/examples/jsm/"
+				}
 			}
 		</script>
   </head>
   <body style="background-color: black;">
-    <!-- <script type="module" src="index.js"></script> -->
+    <!-- <script type="module" src="initThree.js"></script> -->
 
     <div class="guestbook-container">
       <h1>Guest Book</h1>
-      <form name="guestbook-form" method="post" action="">
-          <input type="text" name="name" placeholder="Your Name" required>
-          <textarea name="message" placeholder="Your Message" required></textarea>
+      <h3 id="visitor-counter">Visitors: </h3>
+      <form id="guestbook" method="post" autocomplete="off">
+          <input type="text" id="guestbook-username-field" name="name" placeholder="Your Name">
+          <textarea id="guestbook-message-field" name="message" placeholder="Your Message"" style="resize: vertical;"></textarea>
           <button type="submit">Submit</button>
       </form>
-      <div id="entries">
+      <div>
           <h2>Entries:</h2>
           <ul id="guestbook-entries"></ul>
       </div>

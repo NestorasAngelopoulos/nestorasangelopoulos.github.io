@@ -1,5 +1,8 @@
-import * as THREE from "three";
-import { OrbitControls } from "jsm/controls/OrbitControls.js";
+import * as THREE from './three/build/three.module.js';
+import { OrbitControls } from 'jsm/controls/OrbitControls.js';
+import { TTFLoader } from 'jsm/loaders/TTFLoader.js';
+import { FontLoader } from 'jsm/loaders/FontLoader.js';
+import { TextGeometry } from 'jsm/geometries/TextGeometry.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -75,7 +78,7 @@ const wireMat = new THREE.MeshBasicMaterial({
 });
 const wireMesh = new THREE.Mesh(geo, wireMat);
 wireMesh.scale.setScalar(1.001);
-wireMesh.onClick = function() { console.log("hi!"); open("https://google.com"); };
+wireMesh.onClick = function () { submitGuestBook(); };
 mesh.add(wireMesh);
 
 // lighting
@@ -87,3 +90,27 @@ scene.add(lightHelper);
 
 const ambientLight = new THREE.AmbientLight(0xA020F0);
 scene.add(ambientLight);
+
+
+// Text
+const fontLoader = new FontLoader();
+const ttfLoader = new TTFLoader();
+ttfLoader.load('three/examples/fonts/ttf/kenpixel.ttf', (json) => {
+    const kenpixel = fontLoader.parse(json);
+    const textGeometry = new TextGeometry('Hello, world!', {
+        heigt: 1,
+        depth: 0.5,
+        size: 0.5,
+        font: kenpixel,
+    });
+    const textMaterial = new THREE.MeshNormalMaterial();
+    const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+    textMesh.position.x = 2;
+    textMesh.position.y = 0;
+    textMesh.position.z = -3;
+    textMesh.rotateY(-1.25);
+    textMesh.onClick = function() { document.getElementById('guestbook-message-field').focus(); };
+    scene.add(textMesh);
+});
+
+//TODO: update text based on field

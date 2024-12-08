@@ -40,9 +40,13 @@ function doPost (e) {
 
 function doGet (e) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+
+  var visitors = sheet.getRange('C1').getValue();
+  sheet.getRange('C1').setValue(visitors + 1);
+
   const rows = sheet.getDataRange().getValues();
   rows.reverse();
-  rows.pop();
+
   return ContentService.createTextOutput(JSON.stringify(rows))
     .setMimeType(ContentService.MimeType.JSON);
 }
