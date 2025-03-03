@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Guestbook</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body style="background-color: black;">
+
+    <div class="guestbook-container">
+      <h1>Guest Book</h1>
+      <h3 id="visitor-counter">Visitors: </h3>
+      <form id="guestbook" method="post" autocomplete="off">
+          <input type="text" id="guestbook-username-field" name="name" placeholder="Your Name">
+          <textarea id="guestbook-message-field" name="message" placeholder="Your Message"" style="resize: vertical;"></textarea>
+          <button type="submit">Submit</button>
+      </form>
+      <div>
+          <h2>Entries:</h2>
+          <ul id="guestbook-entries"></ul>
+      </div>
+    </div>
+    <script src="guestbook.js"></script>
+
+  </body>
+</html>
