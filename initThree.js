@@ -5,13 +5,15 @@ import { FontLoader } from 'jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'jsm/geometries/TextGeometry.js';
 import { CSS3DRenderer, CSS3DObject } from 'jsm/renderers/CSS3DRenderer.js';
 
-const rendererHTML = new CSS3DRenderer();
-rendererHTML.setSize(window.innerWidth, window.innerHeight);
-rendererHTML.domElement.style.position = 'absolute';
-rendererHTML.domElement.style.top = '0px';
-rendererHTML.domElement.style.left = '0px';
-rendererHTML.domElement.style.pointerEvents = 'none';
-document.getElementById('css3D').appendChild(rendererHTML.domElement);
+// Renderers
+
+const rendererCSS3D = new CSS3DRenderer();
+rendererCSS3D.setSize(window.innerWidth, window.innerHeight);
+rendererCSS3D.domElement.style.position = 'absolute';
+rendererCSS3D.domElement.style.top = '0px';
+rendererCSS3D.domElement.style.left = '0px';
+rendererCSS3D.domElement.style.pointerEvents = 'none';
+document.getElementById('css3D').appendChild(rendererCSS3D.domElement);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -21,6 +23,8 @@ renderer.domElement.style.top = '0px';
 renderer.domElement.style.left = '0px';
 document.getElementById('webGL').appendChild(renderer.domElement);
 
+// Camera
+
 const fov = 75;
 const aspect = window.innerWidth / window.innerHeight;
 const near = 0.1;
@@ -28,61 +32,106 @@ const far = 30;
 const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
 camera.position.z = 2;
 
-// updates canvas when window is rescaled
-window.addEventListener('resize', function() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    rendererHTML.setSize(window.innerWidth, window.innerHeight);
-    camera.updateProjectionMatrix();
-});
-
 const orbitControls = new OrbitControls(camera, renderer.domElement);
 orbitControls.enableDamping = true;
 orbitControls.dampingFactor = 0.03;
 
+// Scene
+
+// updates canvas when window is rescaled
+window.addEventListener('resize', function() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    rendererCSS3D.setSize(window.innerWidth, window.innerHeight);
+    camera.updateProjectionMatrix();
+});
+
 const scene = new THREE.Scene();
 renderer.setClearColor(0xA020F0);
 
-// handle clicks on 3D objects
+// Interactivity
+
+var occlusionObjects = []; // all "transparent" objects on top of which CSS3D objects are rendered.
 var mousePosition = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
+
+function setMousePos(clientX, clientY){
+    mousePosition.x = (clientX / window.innerWidth) * 2 - 1;
+    mousePosition.y = - (clientY / window.innerHeight) * 2 + 1;
+}
+
+document.addEventListener('mousemove', function(e) { setMousePos(e.clientX, e.clientY); });
+
+// Propagate mouse event from iframe and remap mouse position to root document coordinates
+const trustedIFrameSources = ['nestorasangelopoulos.github.com'];
+window.addEventListener('message', (event) => {
+    // Security check: Ensure the message comes from a trusted source
+    var trusted = false;
+    trustedIFrameSources.forEach(source => { if(event.origin.includes(source)) trusted = true;})
+    if (!trusted) return;
+
+    if (event.data && (event.data.type === 'mousemove')) {
+        const iframes = document.querySelectorAll('iframe');
+
+        iframes.forEach(iframe => {
+            try {
+                // Get iframe bounding box relative to the main document
+                const rect = iframe.getBoundingClientRect();
+
+                // Check if the mouse is inside this iframe
+                if (event.source === iframe.contentWindow && event.data.x >= 0 && event.data.y >= 0 && event.data.x <= rect.width && event.data.y <= rect.height) {
+                    // Remap coordinates to the root document
+                    const remappedX = rect.left + event.data.x;
+                    const remappedY = rect.top + event.data.y;
+
+                    setMousePos(remappedX, remappedY);
+                }
+            } catch (error) { console.warn('Cannot access iframe:', error); }
+        });
+    }
+});
+
+// handle clicks on 3D objects
 window.addEventListener('mouseup', function(e) {
     if (e.button != 0) return; // mouse buttons: 0=left, 1=middle, 2=right, 4=back, 5=forward 
 
-    mousePosition.x = (e.clientX / window.innerWidth) * 2 - 1;
-    mousePosition.y = - (e.clientY / window.innerHeight) * 2 + 1;
+    setMousePos(e.clientX, e.clientY);
 
     raycaster.setFromCamera(mousePosition, camera);
     const intersects = raycaster.intersectObjects(scene.children);
     try { intersects[0].object.onClick(); } catch {} // for a 3D object to become a button, use `myobject`.onClick = function() { //code };
 });
 
-var occlusionObjects = []; // all "transparent" objects on which CSS3D objects are rendered.
-
-document.addEventListener('mousemove', function(e) {
-    mousePosition.x = (e.clientX / window.innerWidth) * 2 - 1;
-    mousePosition.y = - (e.clientY / window.innerHeight) * 2 + 1;
-});
+// Update
 
 // this is the basic "update" or "game" loop (t is increased with time)
-function animate(t = 0){
+function animate(t = 0) {
+
+    // interactivity toggle (WebGL / CSS3D)
+    raycaster.setFromCamera(mousePosition, camera);
+    const intersects = raycaster.intersectObjects(scene.children, true);
+    if (intersects.length > 0){
+        var hit = false;
+        occlusionObjects.forEach(o => {
+            if(o == intersects[0].object) hit = true;
+        });
+        document.getElementById('webGL').style.pointerEvents = hit ? 'none' : 'auto';
+    }
+    else document.getElementById('webGL').style.pointerEvents = 'auto';
+
+    // animations
     mesh.rotation.y = t * 0.0001;
 
+    // rendering
     orbitControls.update();
     renderer.render(scene, camera);
-    rendererHTML.render(scene, camera);
-
-    raycaster.setFromCamera(mousePosition, camera);
-    const intersects = raycaster.intersectObjects(occlusionObjects, true);
-    if (intersects.length > 0) {
-        document.getElementById('webGL').style.pointerEvents = 'none';
-    }
-    else{
-        document.getElementById('webGL').style.pointerEvents = 'auto';
-    }
+    rendererCSS3D.render(scene, camera);
 }
 renderer.setAnimationLoop(animate);
-// === END OF INITIALIZATION ===
+
+
+// ================================================== END OF INITIALIZATION ==================================================
+
 
 // gizmos
 const axesHelper = new THREE.AxesHelper(1);
@@ -92,7 +141,7 @@ const gridHelper = new THREE.GridHelper();
 gridHelper.position.y = -0.0001;
 scene.add(gridHelper);
 
-// geometry
+// icosphere
 const geo = new THREE.IcosahedronGeometry(1.0, 2);
 const mat = new THREE.MeshStandardMaterial({
     color: 0xFFFFFF,
@@ -121,8 +170,7 @@ scene.add(lightHelper);
 const ambientLight = new THREE.AmbientLight(0xA020F0);
 scene.add(ambientLight);
 
-
-// Text
+// text
 const fontLoader = new FontLoader();
 const ttfLoader = new TTFLoader();
 ttfLoader.load('three/examples/fonts/ttf/kenpixel.ttf', (json) => {
@@ -143,21 +191,18 @@ ttfLoader.load('three/examples/fonts/ttf/kenpixel.ttf', (json) => {
     scene.add(textMesh);
 });
 
-//TODO: create 3d html elements using data from the guestbook.
-//TODO: streamline webGL pointer event toggle on mobile (drag events don't recalculate the "focus" of the user) 
-
-// Create add html elements to be rendered by the css3drenderer.
+// create add html elements to be rendered by the css3drenderer.
 //(with help from: https://youtu.be/0ZW3xrFhY3w?feature=shared)
 const iframe = document.createElement('iframe');
 iframe.src = 'guestbook.html';
 iframe.style.width = '480px';
 iframe.style.height = '270px';
-//rendererHTML.domElement.style.mixBlendMode = 'multiply';
+//rendererCSS3D.domElement.style.mixBlendMode = 'multiply';
 const iframe3D = new CSS3DObject(iframe);
 iframe3D.scale.set(0.01, 0.01, 0.01); // (each 3D unit is equivalent to a pixel in length)
 iframe3D.position.set(0, 0.75, -5);
 scene.add(iframe3D);
-// Occlusion
+// occlusion
 //(very usefull: https://gotoo.co/demo/elizabeth/gotoo5th3D/HtmlWith3D/)
 const geometry = new THREE.PlaneGeometry(4.8, 2.7);
 const material = new THREE.MeshBasicMaterial({
@@ -174,4 +219,4 @@ scene.add(occlusionMesh); // add to array so that raycaster can know to disable 
 
 
 
-
+//TODO: create 3d html elements using data from the guestbook.

@@ -22,6 +22,16 @@
       </div>
     </div>
     <script src="guestbook.js"></script>
+    <script>
+      // send 
+      window.addEventListener('mousemove', (event) => {
+        window.parent.postMessage({
+          type: 'mousemove',
+          x: event.clientX,
+          y: event.clientY
+        }, ['nestorasangelopoulos.github.com']);
+      });
+    </script>
 
   </body>
 </html>
