@@ -1,9 +1,9 @@
 import * as THREE from './three/build/three.module.js';
 import { OrbitControls } from 'jsm/controls/OrbitControls.js';
+import { CSS3DRenderer, CSS3DObject } from 'jsm/renderers/CSS3DRenderer.js';
 import { TTFLoader } from 'jsm/loaders/TTFLoader.js';
 import { FontLoader } from 'jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'jsm/geometries/TextGeometry.js';
-import { CSS3DRenderer, CSS3DObject } from 'jsm/renderers/CSS3DRenderer.js';
 
 // Renderers
 
@@ -46,12 +46,12 @@ window.addEventListener('resize', function() {
     camera.updateProjectionMatrix();
 });
 
-const scene = new THREE.Scene();
+export const scene = new THREE.Scene();
 renderer.setClearColor(0xA020F0);
 
 // Interactivity
 
-var occlusionObjects = []; // all "transparent" objects on top of which CSS3D objects are rendered.
+export var occlusionObjects = []; // all "transparent" objects on top of which CSS3D objects are rendered.
 var mousePosition = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 
@@ -63,7 +63,7 @@ function setMousePos(clientX, clientY){
 document.addEventListener('mousemove', function(e) { setMousePos(e.clientX, e.clientY); });
 
 // Propagate mouse event from iframe and remap mouse position to root document coordinates
-const trustedIFrameSources = ['nestorasangelopoulos.github.com'];
+const trustedIFrameSources = [window.location.hostname.toString()];
 window.addEventListener('message', (event) => {
     // Security check: Ensure the message comes from a trusted source
     var trusted = false;
@@ -119,104 +119,73 @@ function animate(t = 0) {
     }
     else document.getElementById('webGL').style.pointerEvents = 'auto';
 
-    // animations
-    mesh.rotation.y = t * 0.0001;
-
     // rendering
     orbitControls.update();
     renderer.render(scene, camera);
     rendererCSS3D.render(scene, camera);
+    
+    // propagate update to any subscribers
+    window.dispatchEvent(new CustomEvent("update", { detail: { time: t } }));
 }
 renderer.setAnimationLoop(animate);
 
+// ======================================================== HELPERS ========================================================
 
-// ================================================== END OF INITIALIZATION ==================================================
+export function isMobile() {
+    return navigator.maxTouchPoints > 0;
+}
 
+export async function createText(content, size = 1, depth = 0.5, position = new THREE.Vector3(0,0,0), rotation = new THREE.Vector3(0,0,0) , font = 'three/examples/fonts/ttf/kenpixel.ttf') {
+    const fontLoader = new FontLoader();
+    const ttfLoader = new TTFLoader();
 
-// gizmos
-const axesHelper = new THREE.AxesHelper(1);
-axesHelper.position.y = 0.0001;
-scene.add(axesHelper);
-const gridHelper = new THREE.GridHelper();
-gridHelper.position.y = -0.0001;
-scene.add(gridHelper);
+    return new Promise((resolve) => {
+        ttfLoader.load(font, (json) => {
+            const kenpixel = fontLoader.parse(json);
+            const textGeometry = new TextGeometry(content, {
+                height: 1,
+                depth: depth,
+                size: size,
+                font: kenpixel,
+            });
+            const textMaterial = new THREE.MeshNormalMaterial();
+            const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+            textMesh.position.set(position.x, position.y, position.z);
+            textMesh.rotation.set(THREE.MathUtils.degToRad(rotation.x), THREE.MathUtils.degToRad(rotation.y), THREE.MathUtils.degToRad(rotation.z));
+            scene.add(textMesh);
 
-// icosphere
-const geo = new THREE.IcosahedronGeometry(1.0, 2);
-const mat = new THREE.MeshStandardMaterial({
-    color: 0xFFFFFF,
-    flatShading: true
-});
-const mesh = new THREE.Mesh(geo, mat);
-mesh.position.set(-3, 1, 0);
-scene.add(mesh);
-
-const wireMat = new THREE.MeshBasicMaterial({
-    color: 0xFFFFFF,
-    wireframe: true
-});
-const wireMesh = new THREE.Mesh(geo, wireMat);
-wireMesh.scale.setScalar(1.001);
-//wireMesh.onClick = function () { submitGuestBook(); }; // document is no longer in this document (loaded with iframe)
-mesh.add(wireMesh);
-
-// lighting
-const hemiLight = new THREE.HemisphereLight(0x5BCEFA, 0xF5A9B8, 3);
-scene.add(hemiLight);
-
-const lightHelper = new THREE.HemisphereLightHelper(hemiLight);
-scene.add(lightHelper);
-
-const ambientLight = new THREE.AmbientLight(0xA020F0);
-scene.add(ambientLight);
-
-// text
-const fontLoader = new FontLoader();
-const ttfLoader = new TTFLoader();
-ttfLoader.load('three/examples/fonts/ttf/kenpixel.ttf', (json) => {
-    const kenpixel = fontLoader.parse(json);
-    const textGeometry = new TextGeometry('Hello, world!', {
-        heigt: 1,
-        depth: 0.5,
-        size: 0.5,
-        font: kenpixel,
+            resolve(textMesh);
+        });
     });
-    const textMaterial = new THREE.MeshNormalMaterial();
-    const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-    textMesh.position.x = 2;
-    textMesh.position.y = 0;
-    textMesh.position.z = -3;
-    textMesh.rotateY(-1.25);
-    //textMesh.onClick = function() { document.getElementById('guestbook-message-field').focus(); }; // document is no longer in this document (loaded with iframe)
-    scene.add(textMesh);
-});
+};
 
 // create add html elements to be rendered by the css3drenderer.
 //(with help from: https://youtu.be/0ZW3xrFhY3w?feature=shared)
-const iframe = document.createElement('iframe');
-iframe.src = 'guestbook.html';
-iframe.style.width = '480px';
-iframe.style.height = '270px';
-//rendererCSS3D.domElement.style.mixBlendMode = 'multiply';
-const iframe3D = new CSS3DObject(iframe);
-iframe3D.scale.set(0.01, 0.01, 0.01); // (each 3D unit is equivalent to a pixel in length)
-iframe3D.position.set(0, 0.75, -5);
-scene.add(iframe3D);
-// occlusion
-//(very usefull: https://gotoo.co/demo/elizabeth/gotoo5th3D/HtmlWith3D/)
-const geometry = new THREE.PlaneGeometry(4.8, 2.7);
-const material = new THREE.MeshBasicMaterial({
-    blending: THREE.NoBlending,
-    opacity: 0,
-    side: THREE.DoubleSide,
-    color: 0x000000,
-});
-const occlusionMesh = new THREE.Mesh(geometry, material);
-occlusionMesh.position.copy(iframe3D.position);
-occlusionObjects.push(occlusionMesh);
-scene.add(occlusionMesh); // add to array so that raycaster can know to disable the webGL PointerEvents
-
-
-
-
-//TODO: create 3d html elements using data from the guestbook.
+export function createPanel(source, width = 4.8, height = 2.7, position = new THREE.Vector3(0,0,0), rotation = new THREE.Vector3(0,0,0)) {
+    const iframe = document.createElement('iframe');
+    iframe.src = source;
+    iframe.style.width = `${width*100}px`;
+    iframe.style.height = `${height*100}px`;
+    //rendererCSS3D.domElement.style.mixBlendMode = 'multiply';
+    const iframe3D = new CSS3DObject(iframe);
+    iframe3D.scale.set(0.01, 0.01, 0.01); // (each 3D unit is equivalent to a pixel in length)
+    iframe3D.position.set(position.x, position.y, position.z);
+    iframe3D.rotation.set(THREE.MathUtils.degToRad(rotation.x), THREE.MathUtils.degToRad(rotation.y), THREE.MathUtils.degToRad(rotation.z));
+    scene.add(iframe3D);
+    // occlusion
+    //(very usefull: https://gotoo.co/demo/elizabeth/gotoo5th3D/HtmlWith3D/)
+    const geometry = new THREE.PlaneGeometry(width, height);
+    const material = new THREE.MeshBasicMaterial({
+        blending: THREE.NoBlending,
+        opacity: 0,
+        side: THREE.DoubleSide,
+        color: 0x000000,
+    });
+    const occlusionMesh = new THREE.Mesh(geometry, material);
+    occlusionMesh.scale.set(100, 100, 100);
+    occlusionObjects.push(occlusionMesh); // add to array so that raycaster can know to disable the webGL PointerEvents
+    scene.add(occlusionMesh);
+    occlusionMesh.parent = iframe3D;
+    
+    return iframe3D;
+}
