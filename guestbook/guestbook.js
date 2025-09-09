@@ -1,4 +1,4 @@
-const scriptURL = 'https://script.google.com/macros/s/AKfycby-0B41vuDHN9gGH0UzdLlt1fWcISftuXVSPAe7nswjm1_kNIsC9Lm2uhUYIRpGBiUXpg/exec'
+const scriptURL = 'https://script.google.com/macros/s/AKfycbwAlFYahY3MMbAYLAandgaVXXkJ02qWOodopTszZfiXPqrxeMMWzKTIJaB4zoyw6IRUMQ/exec'
 
 const form = document.getElementById('guestbook');
 
@@ -21,7 +21,11 @@ function submitGuestBook() {
 }
 
 async function loadEntries() {
-    const response = await fetch(scriptURL);
+    // Send hasVisited cookie with request
+    const hasVisited = getCookie("hasVisited") === "true";
+    const response = await fetch(`${scriptURL}?hasVisited=${hasVisited}`);
+    setCookie('hasVisited', true, 30);
+
     const entries = await response.json();
     const entriesList = document.getElementById('guestbook-entries');
     entriesList.innerHTML = ''; // Clear the list
@@ -37,6 +41,25 @@ async function loadEntries() {
         listItem.textContent = `${name}:\n\t${message}`;
         entriesList.appendChild(listItem);
     });
+}
+
+function setCookie(cname, cvalue, exdays) {
+  const d = new Date();
+  d.setTime(d.getTime() + (exdays*24*60*60*1000));
+  let expires = "expires="+ d.toUTCString();
+  document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+}
+
+function getCookie(cname) {
+  let name = cname + "=";
+  let decodedCookie = decodeURIComponent(document.cookie);
+  let ca = decodedCookie.split(';');
+  for(let i = 0; i <ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) == ' ') c = c.substring(1);
+    if (c.indexOf(name) == 0) return c.substring(name.length, c.length);
+  }
+  return "";
 }
 
 loadEntries();
