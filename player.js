@@ -1,7 +1,5 @@
 import * as THREE from './three/build/three.module.js';
-import { scene, collisionObjects, camera, createMesh, isMobile, GetKey, GetKeyDown, GetKeyUp, CapsuleIntersectionWithCollection } from './engine.js';
-
-export var active = false;
+import { CapsuleIntersectionWithCollection } from './engine.js';
 
 const height = 2;
 const radius = 0.5;
@@ -13,14 +11,24 @@ const terminalVelocity = 2;
 var verticalVelocity = 0;
 var grounded;
 
-export const player = createMesh(
+const player = createMesh(
     new THREE.CylinderGeometry(radius, radius, height),
     new THREE.MeshStandardMaterial({color: 0x00FFFF, flatShading: true}),
     new THREE.Vector3(0, height/2 + 1, 0),
 );
 
+window.player = {
+    active: false,
+    model: player
+};
+
+uiButtonMap = {
+    mobileA: "Space",
+    mobileB: "KeyZ"
+};
+
 window.addEventListener("update", e => {
-    if (!active) return;
+    if (!window.player.active) return;
 
     // Camera-based movement
     const move = cameraRelativeMovement();
@@ -36,7 +44,7 @@ window.addEventListener("update", e => {
     tryMove(new THREE.Vector3(0, verticalVelocity * delta, 0));
     
     // Jump
-    if (grounded && GetKeyDown('Space')) verticalVelocity = jumpVel;
+    if (grounded && (GetKeyDown('Space' || GetKeyDown('mobileA')))) verticalVelocity = jumpVel;
 });
 
 function cameraRelativeMovement() {
@@ -58,8 +66,16 @@ function cameraRelativeMovement() {
     if (GetKey('KeyD')) move.add(right);
     if (GetKey('KeyA')) move.sub(right);
 
+    if (joystick) {
+        move.add(right.multiplyScalar(joystick.x));
+        move.add(dir.multiplyScalar(joystick.y));
+    }
+
     // Normalize to prevent diagonal speed boost
-    if (move.length() > 0) move.normalize().multiplyScalar(speed);
+    if (move.length() > 0) {
+        if (joystick) move.multiplyScalar(speed);
+        else move.normalize().multiplyScalar(speed);
+    }
 
     return move;
 }
@@ -94,8 +110,3 @@ function tryMove(offset) {
         // otherwise loop and try to move the remaining vector
     }
 }
-
-window.player = player;
-
-
-setTimeout(function() { active = true; }, 500);

@@ -29,14 +29,15 @@ const fov = 75;
 const aspect = window.innerWidth / window.innerHeight;
 const near = 0.1;
 const far = 30;
-export const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+window.camera = camera;
 camera.position.z = 5;
 camera.position.y = 5;
 camera.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0, -45))
 
-const orbitControls = new OrbitControls(camera, renderer.domElement);
-orbitControls.enableDamping = true;
-orbitControls.dampingFactor = 0.03;
+const controls = new OrbitControls(camera, renderer.domElement);
+if (isMobile()) controls.rotateSpeed = 0.75;
+window.controls = controls;
 
 // Scene
 
@@ -45,15 +46,18 @@ window.addEventListener('resize', function() {
     camera.aspect = window.innerWidth / window.innerHeight;
     renderer.setSize(window.innerWidth, window.innerHeight);
     rendererCSS3D.setSize(window.innerWidth, window.innerHeight);
+    resizeUI();
     camera.updateProjectionMatrix();
 });
 
-export const scene = new THREE.Scene();
+const scene = new THREE.Scene();
 renderer.setClearColor(0xA020F0);
+window.scene = scene;
 
 // Interactivity
 
-export var occlusionObjects = []; // all "transparent" objects on top of which CSS3D objects are rendered.
+var occlusionObjects = []; // all "transparent" objects on top of which CSS3D objects are rendered.
+window.occlusionObjects = occlusionObjects;
 var mousePosition = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 
@@ -126,25 +130,41 @@ function animate(t = 0) {
     else document.getElementById('webGL').style.pointerEvents = 'auto';
 
     // rendering
-    orbitControls.update();
+    controls.update();
     renderer.render(scene, camera);
     rendererCSS3D.render(scene, camera);
     
     // propagate update to any subscribers
     window.dispatchEvent(new CustomEvent("update", { detail: { time: t, delta: delta } }));
     window.dispatchEvent(new CustomEvent("lateUpdate", { detail: { time: t, delta: delta } }));
+    lastPressedKeys = new Set(pressedKeys);
 }
 renderer.setAnimationLoop(animate);
 
 // ======================================================== HELPERS ========================================================
 
-export function isMobile() {
-    return navigator.maxTouchPoints > 0;
+function isMobile() {
+        const toMatch = [
+        /Android/i,
+        /webOS/i,
+        /iPhone/i,
+        /iPad/i,
+        /iPod/i,
+        /BlackBerry/i,
+        /Windows Phone/i
+    ];
+    
+    return toMatch.some((toMatchItem) => {
+        return navigator.userAgent.match(toMatchItem);
+    });
+
+    //return navigator.maxTouchPoints > 0;
 }
+window.isMobile = isMobile;
 
 // Builders
 
-export function createMesh(geo, mat, position = new THREE.Vector3(), rotation = new THREE.Vector3(), scale = new THREE.Vector3(1, 1, 1)) {
+function createMesh(geo, mat, position = new THREE.Vector3(), rotation = new THREE.Vector3(), scale = new THREE.Vector3(1, 1, 1)) {
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.copy(position);
     mesh.rotation.set(THREE.MathUtils.degToRad(rotation.x), THREE.MathUtils.degToRad(rotation.y), THREE.MathUtils.degToRad(rotation.z));
@@ -154,19 +174,20 @@ export function createMesh(geo, mat, position = new THREE.Vector3(), rotation = 
 
     return mesh;
 }
+window.createMesh = createMesh;
 
-export async function createText(content, size = 1, depth = 0.5, position = new THREE.Vector3(), rotation = new THREE.Vector3() , font = 'three/examples/fonts/ttf/kenpixel.ttf') {
+async function createText(content, size = 1, depth = 0.5, position = new THREE.Vector3(), rotation = new THREE.Vector3() , font = 'three/examples/fonts/ttf/kenpixel.ttf') {
     const fontLoader = new FontLoader();
     const ttfLoader = new TTFLoader();
 
     return new Promise((resolve) => {
         ttfLoader.load(font, (json) => {
-            const kenpixel = fontLoader.parse(json);
+            const parsedFont = fontLoader.parse(json);
             const textGeometry = new TextGeometry(content, {
                 height: 1,
                 depth: depth,
                 size: size,
-                font: kenpixel,
+                font: parsedFont,
             });
             const textMaterial = new THREE.MeshNormalMaterial();
             const textMesh = new THREE.Mesh(textGeometry, textMaterial);
@@ -178,10 +199,11 @@ export async function createText(content, size = 1, depth = 0.5, position = new 
         });
     });
 };
+window.createText = createText;
 
 // create add html elements to be rendered by the css3drenderer.
 //(with help from: https://youtu.be/0ZW3xrFhY3w)
-export function createPanel(source, width = 4.8, height = 2.7, position = new THREE.Vector3(), rotation = new THREE.Vector3()) {
+function createPanel(source, width = 4.8, height = 2.7, position = new THREE.Vector3(), rotation = new THREE.Vector3()) {
     const iframe = document.createElement('iframe');
     iframe.src = source;
     iframe.style.width = `${width*100}px`;
@@ -208,6 +230,7 @@ export function createPanel(source, width = 4.8, height = 2.7, position = new TH
     
     return iframe3D;
 }
+window.createPanel = createPanel;
 
 // Input Handling
 
@@ -215,14 +238,17 @@ let lastPressedKeys = new Set();
 const pressedKeys = new Set();
 window.addEventListener("keydown", (e) => pressedKeys.add(e.code));
 window.addEventListener("keyup", (e) => pressedKeys.delete(e.code));
-window.addEventListener("lateUpdate", () => { lastPressedKeys = new Set(pressedKeys); });
-export const GetKey = (code) => pressedKeys.has(code);
-export const GetKeyDown = (code) => pressedKeys.has(code) && !lastPressedKeys.has(code);
-export const GetKeyUp = (code) => !pressedKeys.has(code) && lastPressedKeys.has(code);
+const GetKey = (code) => pressedKeys.has(code);
+window.GetKey = GetKey;
+const GetKeyDown = (code) => pressedKeys.has(code) && !lastPressedKeys.has(code);
+window.GetKeyDown = GetKeyDown;
+const GetKeyUp = (code) => !pressedKeys.has(code) && lastPressedKeys.has(code);
+window.GetKeyUp = GetKeyUp;
 
 // Physics
 
-export var collisionObjects = [];
+var collisionObjects = [];
+window.collisionObjects = collisionObjects;
 
 //(with help from: https://wickedengine.net/2020/04/capsule-collision-detection)
 export function CapsuleIntersectionWithCollection(center, height, radius, collection = scene.children) {
