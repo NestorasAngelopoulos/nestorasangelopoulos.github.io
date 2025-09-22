@@ -15,13 +15,35 @@ rendererCSS3D.domElement.style.left = '0px';
 rendererCSS3D.domElement.style.pointerEvents = 'none';
 document.getElementById('css3D').appendChild(rendererCSS3D.domElement);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer();
+renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.domElement.style.position = 'absolute';
 renderer.domElement.style.top = '0px';
 renderer.domElement.style.left = '0px';
 document.getElementById('webGL').appendChild(renderer.domElement);
+
+// Pixelation Pass
+
+window.pixelScale = 8;
+const dpr = Math.min(window.devicePixelRatio || 1, 2);
+const renderTarget = new THREE.WebGLRenderTarget(window.innerWidth * dpr / window.pixelScale, window.innerHeight * dpr / window.pixelScale, {
+    minFilter: THREE.NearestFilter,
+    magFilter: THREE.NearestFilter,
+    generateMipmaps: false,
+    format: THREE.RGBAFormat,
+});
+const postProcessScene = new THREE.Scene();
+const pixelCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const canvasMaterial = new THREE.MeshBasicMaterial({
+    map: renderTarget.texture,
+    blending: THREE.NoBlending,
+});
+canvasMaterial.map.minFilter = THREE.NearestFilter;
+canvasMaterial.map.magFilter = THREE.NearestFilter;
+const canvas = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), canvasMaterial);
+postProcessScene.add(canvas);
 
 // Camera
 
@@ -44,10 +66,11 @@ window.controls = controls;
 // updates canvas when window is rescaled
 window.addEventListener('resize', function() {
     camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     rendererCSS3D.setSize(window.innerWidth, window.innerHeight);
+    renderTarget.setSize(window.innerWidth * dpr / window.pixelScale, window.innerHeight * dpr / window.pixelScale);
     resizeUI();
-    camera.updateProjectionMatrix();
 });
 
 const scene = new THREE.Scene();
@@ -111,6 +134,7 @@ window.addEventListener('mouseup', function(e) {
 // Update
 
 var lastTick = 0;
+var lastPixelScale = window.pixelScale;
 // this is the basic "update" or "game" loop (t is increased with time)
 function animate(t = 0) {
 
@@ -129,15 +153,22 @@ function animate(t = 0) {
     }
     else document.getElementById('webGL').style.pointerEvents = 'auto';
 
-    // rendering
     controls.update();
+
+    // rendering
+    // Update render texture when pixelScale changes
+    if (window.pixelScale != lastPixelScale) renderTarget.setSize(window.innerWidth * dpr / window.pixelScale, window.innerHeight * dpr / window.pixelScale);
+    renderer.setRenderTarget(renderTarget);
     renderer.render(scene, camera);
+    renderer.setRenderTarget(null);
+    renderer.render(postProcessScene, pixelCamera);
     rendererCSS3D.render(scene, camera);
     
     // propagate update to any subscribers
     window.dispatchEvent(new CustomEvent("update", { detail: { time: t, delta: delta } }));
     window.dispatchEvent(new CustomEvent("lateUpdate", { detail: { time: t, delta: delta } }));
     lastPressedKeys = new Set(pressedKeys);
+    lastPixelScale = window.pixelScale;
 }
 renderer.setAnimationLoop(animate);
 
@@ -208,7 +239,7 @@ function createPanel(source, width = 4.8, height = 2.7, position = new THREE.Vec
     iframe.src = source;
     iframe.style.width = `${width*100}px`;
     iframe.style.height = `${height*100}px`;
-    //rendererCSS3D.domElement.style.mixBlendMode = 'multiply';
+    iframe.style.border = '0';
     const iframe3D = new CSS3DObject(iframe);
     iframe3D.scale.set(0.01, 0.01, 0.01); // (each 3D unit is equivalent to a pixel in length)
     iframe3D.position.copy(position);
