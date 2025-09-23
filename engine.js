@@ -26,7 +26,7 @@ document.getElementById('webGL').appendChild(renderer.domElement);
 
 // Pixelation Pass
 
-window.pixelScale = 8;
+window.pixelScale = 4;
 const dpr = Math.min(window.devicePixelRatio || 1, 2);
 const renderTarget = new THREE.WebGLRenderTarget(window.innerWidth * dpr / window.pixelScale, window.innerHeight * dpr / window.pixelScale, {
     minFilter: THREE.NearestFilter,
@@ -138,7 +138,7 @@ var lastPixelScale = window.pixelScale;
 // this is the basic "update" or "game" loop (t is increased with time)
 function animate(t = 0) {
 
-    var delta = (t - lastTick) / 100;
+    var delta = (t - lastTick) / 1000;
     lastTick = t;
 
     // interactivity toggle (WebGL / CSS3D)
@@ -165,8 +165,8 @@ function animate(t = 0) {
     rendererCSS3D.render(scene, camera);
     
     // propagate update to any subscribers
-    window.dispatchEvent(new CustomEvent("update", { detail: { time: t, delta: delta } }));
-    window.dispatchEvent(new CustomEvent("lateUpdate", { detail: { time: t, delta: delta } }));
+    window.dispatchEvent(new CustomEvent("update", { detail: { time: t / 1000, delta: delta } }));
+    window.dispatchEvent(new CustomEvent("lateUpdate", { detail: { time: t / 1000, delta: delta } }));
     lastPressedKeys = new Set(pressedKeys);
     lastPixelScale = window.pixelScale;
 }
