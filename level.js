@@ -61,7 +61,7 @@ collisionObjects.push(helloWorld);
 // panel
 // panels that overlap don't work too well.
 // if you MUST have overlapping panels, make sure to create them in reverse order (background -> foreground) so that interactions work as intended.
-const guestbook = createPanel('./guestbook/guestbook.html', 4.8, 2.7, new THREE.Vector3(0, 1.37, -5));
+const guestbook = createPanel('./guestbook/index.html', 4.8, 2.7, new THREE.Vector3(0, 1.37, -5));
 collisionObjects.push(guestbook.children[0]);
 
 //TODO: create 3d html elements using data from the guestbook.

@@ -1,5 +1,8 @@
 :root {
     color-scheme: dark;
+    --background-hue: hsl(300 100 50);
+    --background-color: hsl(from var(--background-hue) h 30 10);
+    --word-color: hsl(from var(--background-hue) h 60 30);
 }
 
 html {
@@ -18,7 +21,7 @@ html {
 }
 
 body {
-    background-color: #2A152A;
+    background-color: var(--background-color);
     color: white;
 }
 
@@ -54,8 +57,8 @@ body {
     line-height: 5vh;
     white-space: pre-wrap;
     pointer-events: none;
-    color: #6c1c6c;
-    text-shadow: 0 0 5px #6c1c6c, 0 0 5px #6c1c6c;
+    color: var(--word-color);
+    text-shadow: 0 0 5px var(--word-color), 0 0 5px var(--word-color);
     z-index: -1;
     top: -2.5vh;
     left: -2.5vw;

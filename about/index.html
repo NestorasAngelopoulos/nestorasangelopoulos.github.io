@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="./style.css">
   </head>
   <body>
+    <script type="module" src="./article.js"></script>
+    
     <div id="background">
       <pre><div id="words"></div></pre>
     </div>
@@ -52,7 +54,39 @@
       <!-- SPACE -->
       <div style="height: 150vh;"></div>
 
+      <script>
+      backgroundDictionary = {
+        classes : [
+          "about",
+          "main",
+          "questions",
+        ],
+        words : [
+          ["HI", "HELLO", "HAI <3 ", "WELCOME", "GREETINGS", "HEY",],
+          ["STOP", "MEH", "UGH", "BORING", "YAWN", "ZZZ", "SIGH", "BLAH", "WHATEVER", "LAME", "DULL", "TIRED", "SNOOZE", "SLEEPY", "SNORE",],
+          ["REWARD?", "???", "WHAT", "HUH?", "HMM?", "DOUBT", "SKEPTICAL", "QUESTION", "WHY?", "WHAT IF?", "MAYBE", "PERHAPS", "POSSIBLY", "CONCEIVABLY", "UNCERTAIN", "UNSURE", "UNLIKELY",],
+        ]
+      };
+      
+      // Layout
+      function adjustLayout() {
+        if ((window.innerWidth * window.devicePixelRatio || 1) < (window.innerHeight * window.devicePixelRatio || 1)) {
+          document.getElementById("about").style.flexDirection = "column";
+          document.getElementById("me").style.width = "100%";
+        } else {
+          document.getElementById("about").style.flexDirection = "row";
+          document.getElementById("me").style.width = "250px";
+        }
+      }
+      adjustLayout();
+      window.addEventListener('resize', function() { adjustLayout(); });
+    </script>
+    <script type="module"> // Scroll colors
+      import { getScrollProgress } from './article.js';
+      var r = document.querySelector(':root');
+      var hue = parseFloat(getComputedStyle(r).getPropertyValue('--background-hue').trim().match(/hsl\(\s*([\d.]+)/i)[1]);
+      window.addEventListener('scroll', function() { r.style.setProperty('--background-hue', `hsl(${(hue + (getScrollProgress() * 360)) % 360} 100% 50%)`) });
+    </script>
     </div>
   </body>
-  <script src="./about.js"></script>
 </html>
