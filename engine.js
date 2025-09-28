@@ -269,12 +269,12 @@ let lastPressedKeys = new Set();
 const pressedKeys = new Set();
 window.addEventListener("keydown", (e) => pressedKeys.add(e.code));
 window.addEventListener("keyup", (e) => pressedKeys.delete(e.code));
-const GetKey = (code) => pressedKeys.has(code);
-window.GetKey = GetKey;
-const GetKeyDown = (code) => pressedKeys.has(code) && !lastPressedKeys.has(code);
-window.GetKeyDown = GetKeyDown;
-const GetKeyUp = (code) => !pressedKeys.has(code) && lastPressedKeys.has(code);
-window.GetKeyUp = GetKeyUp;
+const getKey = (code) => pressedKeys.has(code);
+window.getKey = getKey;
+const getKeyDown = (code) => pressedKeys.has(code) && !lastPressedKeys.has(code);
+window.getKeyDown = getKeyDown;
+const getKeyUp = (code) => !pressedKeys.has(code) && lastPressedKeys.has(code);
+window.getKeyUp = getKeyUp;
 
 // Physics
 
@@ -282,27 +282,27 @@ var collisionObjects = [];
 window.collisionObjects = collisionObjects;
 
 //(with help from: https://wickedengine.net/2020/04/capsule-collision-detection)
-export function CapsuleIntersectionWithCollection(center, height, radius, collection = scene.children) {
+export function capsuleIntersectionWithCollection(center, height, radius, collection = scene.children) {
     let best = null; // Deepest penetration
     
-    ExecuteOnEachTriangle((p0, p1, p2, mesh) => {
-        const intersection = CapsuleTriangleIntersection(center, height, radius, p0, p1, p2);
+    executeOnEachTriangle((p0, p1, p2, mesh) => {
+        const intersection = capsuleTriangleIntersection(center, height, radius, p0, p1, p2);
         if (intersection && (!best || intersection.depth > best.depth)) best = intersection;
     }, collection);
 
     return best;
 }
 
-function CapsuleTriangleIntersection(center, height, radius, p0, p1, p2) {
-    const closest = ClosestPointOnTriangle(center, p0, p1, p2);
+function capsuleTriangleIntersection(center, height, radius, p0, p1, p2) {
+    const closest = closestPointOnTriangle(center, p0, p1, p2);
     // The center of the best sphere candidate:
     const A = new THREE.Vector3(center.x, center.y - (height * 0.5 - radius), center.z);
     const B = new THREE.Vector3(center.x, center.y + (height * 0.5 - radius), center.z);
-    const sphereCenter = ClosestPointOnLineSegment(A, B, closest);
-    return SphereTriangleIntersection(sphereCenter, radius, p0, p1, p2);
+    const sphereCenter = closestPointOnLineSegment(A, B, closest);
+    return sphereTriangleIntersection(sphereCenter, radius, p0, p1, p2);
 }
 
-function ExecuteOnEachTriangle(callback, collection = scene.children) {
+function executeOnEachTriangle(callback, collection = scene.children) {
     const _v0 = new THREE.Vector3();
     const _v1 = new THREE.Vector3();
     const _v2 = new THREE.Vector3();
@@ -344,7 +344,7 @@ function ExecuteOnEachTriangle(callback, collection = scene.children) {
     }
 }
 
-function SphereTriangleIntersection(center, radius, p0, p1, p2){
+function sphereTriangleIntersection(center, radius, p0, p1, p2){
     // Plane normal
     const N = new THREE.Vector3().crossVectors(
             new THREE.Vector3().subVectors(p1, p0),
@@ -354,7 +354,7 @@ function SphereTriangleIntersection(center, radius, p0, p1, p2){
     const dist = new THREE.Vector3().subVectors(center, p0).dot(N);
     if (dist < -radius || dist > radius) return null; // No intersection with plane
     
-    const closest = ClosestPointOnTriangle(center, p0, p1, p2);
+    const closest = closestPointOnTriangle(center, p0, p1, p2);
     const v = new THREE.Vector3().subVectors(center, closest);
     const distsq = v.lengthSq();
     const radiussq  = radius * radius;
@@ -366,7 +366,7 @@ function SphereTriangleIntersection(center, radius, p0, p1, p2){
     return { normal: penetration_normal, depth: penetration_depth, point: closest};
 }
 
-function ClosestPointOnTriangle(queryPoint, p0, p1, p2){
+function closestPointOnTriangle(queryPoint, p0, p1, p2){
     // Plane normal
     const N = new THREE.Vector3().crossVectors(
             new THREE.Vector3().subVectors(p1, p0),
@@ -394,12 +394,12 @@ function ClosestPointOnTriangle(queryPoint, p0, p1, p2){
     if (inside) return point0;
     
     // Edge 1:
-    const point1 = ClosestPointOnLineSegment(p0, p1, point0);
+    const point1 = closestPointOnLineSegment(p0, p1, point0);
     let best_point = point1.clone();
     let best_distsq = new THREE.Vector3().subVectors(point0, point1).lengthSq();
     
     // Edge 2:
-    const point2 = ClosestPointOnLineSegment(p1, p2, point0);
+    const point2 = closestPointOnLineSegment(p1, p2, point0);
     const d2 = new THREE.Vector3().subVectors(point0, point2).lengthSq();
     if (d2 < best_distsq) {
         best_distsq = d2;
@@ -407,7 +407,7 @@ function ClosestPointOnTriangle(queryPoint, p0, p1, p2){
     }
 
     // Edge 3:
-    const point3 = ClosestPointOnLineSegment(p2, p0, point0);
+    const point3 = closestPointOnLineSegment(p2, p0, point0);
     const d3 = new THREE.Vector3().subVectors(point0, point3).lengthSq();
     if (d3 < best_distsq) {
         best_distsq = d3;
@@ -417,7 +417,7 @@ function ClosestPointOnTriangle(queryPoint, p0, p1, p2){
     return best_point;
 }
 
-function ClosestPointOnLineSegment(A, B, P){
+function closestPointOnLineSegment(A, B, P){
     const AB = new THREE.Vector3().subVectors(B, A);
     const t = new THREE.Vector3().subVectors(P, A).dot(AB) / AB.lengthSq();
     return new THREE.Vector3().addVectors(A, AB.multiplyScalar(Math.min(Math.max(t, 0), 1)));

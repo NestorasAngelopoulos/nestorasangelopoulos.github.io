@@ -1,5 +1,5 @@
 import * as THREE from './three/build/three.module.js';
-import { CapsuleIntersectionWithCollection } from './engine.js';
+import { capsuleIntersectionWithCollection } from './engine.js';
 
 const height = 2;
 const radius = 0.5;
@@ -46,7 +46,7 @@ window.addEventListener("update", e => {
     tryMove(new THREE.Vector3(0, verticalVelocity * delta, 0));
     
     // Jump
-    if (grounded && (GetKeyDown('Space') || GetKeyDown('mobileA'))) verticalVelocity = jumpVel;
+    if (grounded && (getKeyDown('Space') || getKeyDown('mobileA'))) verticalVelocity = jumpVel;
 
     // Change color
     
@@ -69,10 +69,10 @@ function cameraRelativeMovement() {
     right.crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
 
     // Build movement vector from keys
-    if (GetKey('KeyW')) move.add(dir);
-    if (GetKey('KeyS')) move.sub(dir);
-    if (GetKey('KeyD')) move.add(right);
-    if (GetKey('KeyA')) move.sub(right);
+    if (getKey('KeyW')) move.add(dir);
+    if (getKey('KeyS')) move.sub(dir);
+    if (getKey('KeyD')) move.add(right);
+    if (getKey('KeyA')) move.sub(right);
 
     if (joystick) {
         move.add(right.multiplyScalar(joystick.x));
@@ -93,7 +93,7 @@ function tryMove(offset) {
     let remaining = offset.clone();
     for (let iter = 0; iter < maxIter; iter++) {
         player.position.add(remaining);
-        const hit = CapsuleIntersectionWithCollection(player.position, height, radius, collisionObjects);
+        const hit = capsuleIntersectionWithCollection(player.position, height, radius, collisionObjects);
         if (!hit) break;
 
         // Push out along normal by depth + epsilon
