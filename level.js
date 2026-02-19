@@ -54,16 +54,16 @@ scene.add(hemiLight);
 const ambientLight = new THREE.AmbientLight(0xA020F0);
 scene.add(ambientLight);
 
-// text
+// Text
 const helloWorld = await createText('Hello, world!', 0.5, 0.5, new THREE.Vector3(2, 0, -3), new THREE.Vector3(0, -75, 0), 'three/examples/fonts/ttf/kenpixel.ttf');
 collisionObjects.push(helloWorld);
 
-// panel
-// panels that overlap don't work too well.
-// if you MUST have overlapping panels, make sure to create them in reverse order (background -> foreground) so that interactions work as intended.
+// Panel
+// Panels that overlap from the perspective of the camera don't work too well.
+// If you MUST have overlapping panels, make sure to create them in reverse order acording to their intended viewing direction (background -> foreground) so that interactions work as intended.
 const guestbook = createPanel('./guestbook/index.html', 4.8, 2.7, new THREE.Vector3(0, 1.37, -5));
 collisionObjects.push(guestbook.children[0]);
 
-//TODO: create 3d html elements using data from the guestbook.
+//TODO: Create 3d html elements using data from the guestbook.
 
 player.active = true;

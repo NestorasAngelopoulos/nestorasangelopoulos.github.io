@@ -48,8 +48,7 @@ window.addEventListener("update", e => {
     // Jump
     if (grounded && (getKeyDown('Space') || getKeyDown('mobileA'))) verticalVelocity = jumpVel;
 
-    // Change color
-    
+    // Update color every 1/6 second
     const step = 1 / 6;
     const quantized = Math.floor(e.detail.time / step) * step;
     player.material.color.setHSL((quantized / 10) % 1, 1, 0.5);
@@ -62,7 +61,7 @@ function cameraRelativeMovement() {
 
     // Forward (camera look direction, flattened)
     camera.getWorldDirection(dir);
-    dir.y = 0; // ignore vertical tilt
+    dir.y = 0; // Ignore vertical tilt
     dir.normalize();
 
     // Right (perpendicular to forward)

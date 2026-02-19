@@ -23,7 +23,8 @@
     </div>
     <script src="guestbook.js"></script>
     <script>
-      // send 
+      // Bubble mousemove events to parent window.
+      // This lets us properly handle the case where the iFrame is partially obstructed by a 3D object, and toggle the WebGL layer's pointer events.
       window.addEventListener('mousemove', (event) => {
         window.parent.postMessage({
           type: 'mousemove',

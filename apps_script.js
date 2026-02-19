@@ -1,3 +1,8 @@
+// This is the Google Apps Script code for handling form submissions and visitor tracking for the guestbook.
+// It includes functions for initial setup, handling POST and GET requests, and sending email notifications when someone signs the guest book.
+// The script uses cookies to track whether a visitor has already visited so that they aren't counted twice.
+// The data is stored in a Google Sheet, and the script ensures that concurrent submissions are handled safely using locks.
+
 const sheetName = 'data';
 const scriptProp = PropertiesService.getScriptProperties();
 

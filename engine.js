@@ -5,7 +5,28 @@ import { TTFLoader } from 'jsm/loaders/TTFLoader.js';
 import { FontLoader } from 'jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'jsm/geometries/TextGeometry.js';
 
-// Renderers
+// ======================================================== CORE ENGINE SETUP ========================================================
+
+// Force disable mobile zooming on reorientation
+const style = document.createElement('style');
+style.textContent = `
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    height: 100dvh;
+}
+
+#webGL, #css3D {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+}
+`;
+document.head.appendChild(style);
+
+// RENDERERS
 
 const rendererCSS3D = new CSS3DRenderer();
 rendererCSS3D.setSize(window.innerWidth, window.innerHeight);
@@ -24,7 +45,7 @@ renderer.domElement.style.top = '0px';
 renderer.domElement.style.left = '0px';
 document.getElementById('webGL').appendChild(renderer.domElement);
 
-// Pixelation Pass
+// PIXELATION POST-PROCESSING SETUP
 
 window.pixelScale = 4;
 const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -45,7 +66,7 @@ canvasMaterial.map.magFilter = THREE.NearestFilter;
 const canvas = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), canvasMaterial);
 postProcessScene.add(canvas);
 
-// Camera
+// CAMERA
 
 const fov = 75;
 const aspect = window.innerWidth / window.innerHeight;
@@ -61,25 +82,27 @@ const controls = new OrbitControls(camera, renderer.domElement);
 if (isMobile()) controls.rotateSpeed = 0.75;
 window.controls = controls;
 
-// Scene
+// SCENE
 
-// updates canvas when window is rescaled
+// Updates canvas when window is rescaled
 window.addEventListener('resize', function() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    rendererCSS3D.setSize(window.innerWidth, window.innerHeight);
-    renderTarget.setSize(window.innerWidth * dpr / window.pixelScale, window.innerHeight * dpr / window.pixelScale);
-    resizeUI();
+    setTimeout(function() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        rendererCSS3D.setSize(window.innerWidth, window.innerHeight);
+        renderTarget.setSize(window.innerWidth * dpr / window.pixelScale, window.innerHeight * dpr / window.pixelScale);
+        resizeUI();
+    }, 50);
 });
 
 const scene = new THREE.Scene();
 renderer.setClearColor(0xA020F0);
 window.scene = scene;
 
-// Interactivity
+// INTERACTIVITY
 
-var occlusionObjects = []; // all "transparent" objects on top of which CSS3D objects are rendered.
+var occlusionObjects = []; // All "holdout" objects on top of which CSS3D objects are rendered
 window.occlusionObjects = occlusionObjects;
 var mousePosition = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
@@ -120,28 +143,28 @@ window.addEventListener('message', (event) => {
     }
 });
 
-// handle clicks on 3D objects
+// Handle clicks on 3D objects
 window.addEventListener('mouseup', function(e) {
-    if (e.button != 0) return; // mouse buttons: 0=left, 1=middle, 2=right, 4=back, 5=forward 
+    if (e.button != 0) return; // Mouse buttons: 0=left, 1=middle, 2=right, 4=back, 5=forward 
 
     setMousePos(e.clientX, e.clientY);
 
     raycaster.setFromCamera(mousePosition, camera);
     const intersects = raycaster.intersectObjects(scene.children);
-    try { intersects[0].object.onClick(); } catch {} // for a 3D object to become a button, use `myobject`.onClick = function() { //code };
+    try { intersects[0].object.onClick(); } catch {} // For a 3D object to become a button, use `myobject`.onClick = function() { //code };
 });
 
-// Update
+// UPDATE LOOP
 
 var lastTick = 0;
 var lastPixelScale = window.pixelScale;
-// this is the basic "update" or "game" loop (t is increased with time)
+// This is the basic "update" or "game" loop (t is increased with time)
 function animate(t = 0) {
 
     var delta = (t - lastTick) / 1000;
     lastTick = t;
 
-    // interactivity toggle (WebGL / CSS3D)
+    // Interactivity toggle (WebGL / CSS3D)
     raycaster.setFromCamera(mousePosition, camera);
     const intersects = raycaster.intersectObjects(scene.children, true);
     if (intersects.length > 0){
@@ -155,7 +178,7 @@ function animate(t = 0) {
 
     controls.update();
 
-    // rendering
+    // Rendering
     // Update render texture when pixelScale changes
     if (window.pixelScale != lastPixelScale) renderTarget.setSize(window.innerWidth * dpr / window.pixelScale, window.innerHeight * dpr / window.pixelScale);
     renderer.setRenderTarget(renderTarget);
@@ -164,7 +187,7 @@ function animate(t = 0) {
     renderer.render(postProcessScene, pixelCamera);
     rendererCSS3D.render(scene, camera);
     
-    // propagate update to any subscribers
+    // Propagate update to any subscribers
     window.dispatchEvent(new CustomEvent("update", { detail: { time: t / 1000, delta: delta } }));
     window.dispatchEvent(new CustomEvent("lateUpdate", { detail: { time: t / 1000, delta: delta } }));
     lastPressedKeys = new Set(pressedKeys);
@@ -232,8 +255,8 @@ async function createText(content, size = 1, depth = 0.5, position = new THREE.V
 };
 window.createText = createText;
 
-// create add html elements to be rendered by the css3drenderer.
-//(with help from: https://youtu.be/0ZW3xrFhY3w)
+// Add html elements to be rendered by the css3drenderer.
+// (with help from: https://youtu.be/0ZW3xrFhY3w)
 function createPanel(source, width = 4.8, height = 2.7, position = new THREE.Vector3(), rotation = new THREE.Vector3()) {
     const iframe = document.createElement('iframe');
     iframe.src = source;
@@ -245,8 +268,8 @@ function createPanel(source, width = 4.8, height = 2.7, position = new THREE.Vec
     iframe3D.position.copy(position);
     iframe3D.rotation.set(THREE.MathUtils.degToRad(rotation.x), THREE.MathUtils.degToRad(rotation.y), THREE.MathUtils.degToRad(rotation.z));
     scene.add(iframe3D);
-    // occlusion
-    //(very usefull: https://gotoo.co/demo/elizabeth/gotoo5th3D/HtmlWith3D)
+    // Occlusion
+    // (very usefull: https://gotoo.co/demo/elizabeth/gotoo5th3D/HtmlWith3D)
     const geometry = new THREE.PlaneGeometry(width, height);
     const material = new THREE.MeshBasicMaterial({
         blending: THREE.NoBlending,
@@ -256,14 +279,14 @@ function createPanel(source, width = 4.8, height = 2.7, position = new THREE.Vec
     });
     const occlusionMesh = new THREE.Mesh(geometry, material);
     occlusionMesh.scale.set(100, 100, 100);
-    occlusionObjects.push(occlusionMesh); // add to array so that raycaster can know to disable the webGL PointerEvents
+    occlusionObjects.push(occlusionMesh); // Add to array so that raycaster can know to disable the webGL PointerEvents
     iframe3D.add(occlusionMesh);
     
     return iframe3D;
 }
 window.createPanel = createPanel;
 
-// Input Handling
+// INPUT HANDLING
 
 let lastPressedKeys = new Set();
 const pressedKeys = new Set();
@@ -276,12 +299,12 @@ window.getKeyDown = getKeyDown;
 const getKeyUp = (code) => !pressedKeys.has(code) && lastPressedKeys.has(code);
 window.getKeyUp = getKeyUp;
 
-// Physics
+// PHYSICS
 
 var collisionObjects = [];
 window.collisionObjects = collisionObjects;
 
-//(with help from: https://wickedengine.net/2020/04/capsule-collision-detection)
+// (with help from: https://wickedengine.net/2020/04/capsule-collision-detection)
 export function capsuleIntersectionWithCollection(center, height, radius, collection = scene.children) {
     let best = null; // Deepest penetration
     
