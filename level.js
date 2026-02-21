@@ -9,7 +9,7 @@ import * as THREE from './three/build/three.module.js';
 // scene.add(gridHelper);
 
 const ground = createMesh(
-    new THREE.BoxGeometry(20, 0.1, 20), new THREE.MeshStandardMaterial({
+    new THREE.CylinderGeometry(10, 10, 0.1, 32), new THREE.MeshStandardMaterial({
         color: 0x888888,
         flatShading: true
     }),

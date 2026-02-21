@@ -196,17 +196,20 @@ function resizeUI() {
         buttonB.style.fontSize = `${buttonHeight * 0.8}px`;
     }
 }
-window.resizeUI = resizeUI;
-var uiCreated = true;
+let uiCreated = true;
 resizeUI();
 
-function setHealthFill(percent) {
+function setHealthFill(ratio) {
     const availableWidth = health.offsetWidth - healthFillInset * 2;
-    var healthPercent = Math.max(Math.min(percent, 100), 0);
+    var healthPercent = Math.max(Math.min(ratio, 1), 0) * 100;
     fill.style.width = `${availableWidth * healthPercent / 100}px`;
 }
-window.setHealthBar = setHealthFill;
 
 function isVertical() {
     return window.innerHeight > window.innerWidth;
+}
+
+window.ui = {
+    resize: resizeUI,
+    setHealthBar: setHealthFill
 }

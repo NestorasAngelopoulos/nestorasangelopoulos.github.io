@@ -74,13 +74,12 @@ const near = 0.1;
 const far = 30;
 const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
 window.camera = camera;
-camera.position.z = 5;
-camera.position.y = 5;
-camera.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0, -45))
+camera.position.copy(new THREE.Vector3(0.3, 10, 15));
+camera.setRotationFromAxisAngle(new THREE.Vector3(1, 0, 0, -45));
 
-const controls = new OrbitControls(camera, renderer.domElement);
-if (isMobile()) controls.rotateSpeed = 0.75;
-window.controls = controls;
+const cameraControls = new OrbitControls(camera, renderer.domElement);
+if (isMobile()) cameraControls.rotateSpeed = 0.75;
+window.cameraControls = cameraControls;
 
 // SCENE
 
@@ -92,7 +91,7 @@ window.addEventListener('resize', function() {
         renderer.setSize(window.innerWidth, window.innerHeight);
         rendererCSS3D.setSize(window.innerWidth, window.innerHeight);
         renderTarget.setSize(window.innerWidth * dpr / window.pixelScale, window.innerHeight * dpr / window.pixelScale);
-        resizeUI();
+        ui.resize();
     }, 50);
 });
 
@@ -166,6 +165,7 @@ function animate(t = 0) {
 
     // Interactivity toggle (WebGL / CSS3D)
     raycaster.setFromCamera(mousePosition, camera);
+    raycaster.layers.set(0);
     const intersects = raycaster.intersectObjects(scene.children, true);
     if (intersects.length > 0){
         var hit = false;
@@ -176,7 +176,7 @@ function animate(t = 0) {
     }
     else document.getElementById('webGL').style.pointerEvents = 'auto';
 
-    controls.update();
+    if (cameraControls.enabled) cameraControls.update();
 
     // Rendering
     // Update render texture when pixelScale changes

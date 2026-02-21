@@ -1,6 +1,9 @@
 import * as THREE from './three/build/three.module.js';
 import { capsuleIntersectionWithCollection } from './engine.js';
 
+const maxHealth = 100;
+let health = maxHealth;
+
 const height = 2;
 const radius = 0.5;
 const speed = 0.15;
@@ -20,12 +23,14 @@ const player = createMesh(
 
 window.player = {
     active: false,
-    model: player
+    model: player, 
+    health: health,
+    damage: damage
 };
 
 uiButtonMap = {
     mobileA: "Space",
-    mobileB: "KeyZ"
+    mobileB: "Enter"
 };
 
 window.addEventListener("update", e => {
@@ -47,11 +52,23 @@ window.addEventListener("update", e => {
     
     // Jump
     if (grounded && (getKeyDown('Space') || getKeyDown('mobileA'))) verticalVelocity = jumpVel;
+    if (getKeyDown('Enter') || getKeyDown('mobileB')) {
+        if (cameraControls.enabled) {
+            cameraControls.enabled = false;
+            camera.layers.disable(1);
+        } else {
+            cameraControls.enabled = true;
+            camera.layers.enable(1);
+        }
+    }
 
     // Update color every 1/6 second
     const step = 1 / 6;
     const quantized = Math.floor(e.detail.time / step) * step;
     player.material.color.setHSL((quantized / 10) % 1, 1, 0.5);
+
+    // Die when you fall out of the world
+    if (window.player.model.position.y < -10) damage(maxHealth);
 });
 
 function cameraRelativeMovement() {
@@ -114,4 +131,13 @@ function tryMove(offset) {
         if (remaining.lengthSq() < 1e-8) break;
         // Otherwise loop and try to move the remaining vector
     }
+}
+
+function damage(damage) {
+    health -= damage;
+    if (health <= 0) {
+        window.player.active = false;
+        window.location.reload();
+    }
+    ui.setHealthBar(health / maxHealth);
 }
