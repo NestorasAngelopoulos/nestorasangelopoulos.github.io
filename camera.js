@@ -7,7 +7,7 @@ let spline;
 let splinePoints = [];
 let splineProgress = 0.5; // Start in middle of spline for better visuals on spawn
 let currentPosition = camera.position.clone();
-let smoothedLookTarget = player.model.position.clone();
+let smoothedLookTarget = player.collider.position.clone();
 
 // Straight track
 //splinePoints = [new THREE.Vector3(-10, 10, 10), new THREE.Vector3(10, 10, 10)];
@@ -38,9 +38,9 @@ scene.add(splineLine); // Add spline to scene
 cameraControls.enabled = false;
 window.addEventListener("lateUpdate", () => {
     if (cameraControls.enabled) return; // Don't override freecam
-    if (!window.player?.model) return;
+    if (!player?.collider) return;
 
-    const playerPos = window.player.model.position;
+    const playerPos = player.collider.position;
 
     // Smoothly move splineProgress toward the closest t to playerPos
     splineProgress = THREE.MathUtils.lerp(splineProgress, findClosestTToPoint(playerPos), 0.1);

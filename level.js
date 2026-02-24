@@ -60,10 +60,10 @@ collisionObjects.push(helloWorld);
 
 // Panel
 // Panels that overlap from the perspective of the camera don't work too well.
-// If you MUST have overlapping panels, make sure to create them in reverse order acording to their intended viewing direction (background -> foreground) so that interactions work as intended.
+// If you MUST have overlapping panels, make sure to create them in reverse order according to their intended viewing direction (background -> foreground) so that interactions work as intended.
 const guestbook = createPanel('./guestbook/index.html', 4.8, 2.7, new THREE.Vector3(0, 1.37, -5));
 collisionObjects.push(guestbook.children[0]);
 
 //TODO: Create 3d html elements using data from the guestbook.
 
-player.active = true;
+if (player.model) player.active = true;
