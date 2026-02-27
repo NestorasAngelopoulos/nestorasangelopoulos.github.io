@@ -37,6 +37,7 @@ uiButtonMap = {
 };
 
 let targetQuaternion = new THREE.Quaternion();
+let mixer;
 
 window.addEventListener("update", e => {
     if (!player.active) return;
@@ -82,6 +83,7 @@ window.addEventListener("update", e => {
     //const step = 1 / 6;
     //const quantized = Math.floor(e.detail.time / step) * step;
     //player.collider.material.color.setHSL((quantized / 10) % 1, 1, 0.5);
+    if (mixer) mixer.update(delta);
 });
 
 // MOVEMENT
@@ -159,14 +161,24 @@ function damage(damage) {
 
 // ANIMATIONS
 
+let animations = {};
 async function loadModel() {
     const glb = await new GLTFLoader().loadAsync('Bucket.glb');
     const playerModel = glb.scene; // Attach scene instead of model to preserve offset from origin
     player.collider.add(playerModel);
     playerModel.position.copy(new THREE.Vector3(0, -height/2, 0));
-    player.model = playerModel.children[0]; // Don't save the scene, just the model itself
-    //console.log(`Loaded player model: ${player.model.name}`);
+    player.model = playerModel.children[0]; // Don't store the whole scene, just the model itself
+    
+    // Index animations Add animation support
+    mixer = new THREE.AnimationMixer(player.model);
+    glb.animations.forEach(clip => {
+        animations[clip.name] = clip;
+    });
+    
     player.collider.material.opacity = 0;
     player.active = true; // TODO: Maybe check if level is ready first in case model loads before level?
 }
 await loadModel();
+
+const idleClip = animations["Idle"];
+if (idleClip) mixer.clipAction(idleClip).play();
