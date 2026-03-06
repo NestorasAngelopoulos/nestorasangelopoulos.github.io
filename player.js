@@ -36,9 +36,9 @@ uiButtonMap = {
     mobileB: "Enter"
 };
 
-let targetQuaternion = new THREE.Quaternion();
-let mixer;
+// MOVEMENT
 
+let targetQuaternion = new THREE.Quaternion();
 window.addEventListener("update", e => {
     if (!player.active) return;
     
@@ -49,13 +49,13 @@ window.addEventListener("update", e => {
     const move = cameraRelativeMovement();
     if (move.length() > 0) tryMove(move.add(new THREE.Vector3(0, delta / gravity, 0)));
 
-    // Rotate model
+    // Rotate player
     move.y = 0;
     if (move.lengthSq() > 0) {
         move.normalize();
         targetQuaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), move); // Z+ is forward
     }
-    player.model.quaternion.slerp(targetQuaternion, rotationSpeed);
+    player.collider.quaternion.slerp(targetQuaternion, rotationSpeed);
 
     // Calculate gravity
     verticalVelocity -= gravity * delta;
@@ -83,10 +83,8 @@ window.addEventListener("update", e => {
     //const step = 1 / 6;
     //const quantized = Math.floor(e.detail.time / step) * step;
     //player.collider.material.color.setHSL((quantized / 10) % 1, 1, 0.5);
-    if (mixer) mixer.update(delta);
 });
 
-// MOVEMENT
 
 function cameraRelativeMovement() {
     const dir = new THREE.Vector3();
@@ -161,7 +159,11 @@ function damage(damage) {
 
 // ANIMATIONS
 
+let mixer;
 let animations = {};
+let tailBones = [];
+let tailAnimQuats = [];
+let tailOffsets = [];
 async function loadModel() {
     const glb = await new GLTFLoader().loadAsync('Bucket.glb');
     const playerModel = glb.scene; // Attach scene instead of model to preserve offset from origin
@@ -174,6 +176,15 @@ async function loadModel() {
     glb.animations.forEach(clip => {
         animations[clip.name] = clip;
     });
+
+    // Find tail bones
+    player.model.traverse(obj => {
+        if (obj.isBone && obj.name.includes("Tail")) {
+            tailBones.push(obj);
+            tailAnimQuats.push(obj.quaternion.clone());
+            tailOffsets.push(new THREE.Quaternion());
+        }
+    });
     
     player.collider.material.opacity = 0;
     player.active = true; // TODO: Maybe check if level is ready first in case model loads before level?
@@ -182,3 +193,28 @@ await loadModel();
 
 const idleClip = animations["Idle"];
 if (idleClip) mixer.clipAction(idleClip).play();
+
+let localVelocity;
+let lastPosition = player.collider.position.clone();
+
+window.addEventListener("update", e => {
+    if (!player.model) return;
+    
+    const delta = e.detail.delta;
+    
+    // Local velocity
+    localVelocity = player.collider.position.clone().sub(lastPosition).divideScalar(delta).applyQuaternion(player.collider.quaternion.clone().invert());
+    lastPosition.copy(player.collider.position);
+
+    tailBones.forEach((bone, i) => bone.quaternion.copy(tailAnimQuats[i])); // Clear swing before updating animation
+    if (mixer) mixer.update(delta);
+    // Add swing to animation
+    tailBones.forEach((bone, i) => {
+        tailAnimQuats[i].copy(bone.quaternion);
+
+        const swingMagnitude = 0.05;
+        const swingQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler((localVelocity.z - localVelocity.y) * swingMagnitude / 2, localVelocity.x * swingMagnitude, localVelocity.x * swingMagnitude));
+        tailOffsets[i].slerp(swingQuat, rotationSpeed);
+        bone.quaternion.multiply(tailOffsets[i]);
+    });
+});
