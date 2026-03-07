@@ -77,7 +77,7 @@ window.addEventListener("update", e => {
     }
 
     // Die when you fall out of the world
-    if (window.player.model.position.y < -10) damage(maxHealth);
+    if (window.player.collider.position.y < -10) damage(maxHealth);
 
     // Update collider color every 1/6 second
     //const step = 1 / 6;
@@ -161,9 +161,28 @@ function damage(damage) {
 
 let mixer;
 let animations = {};
+
+// Tail
 let tailBones = [];
 let tailAnimQuats = [];
 let tailOffsets = [];
+const tailSwingMagnitude = 0.05;
+
+let localVelocity = new THREE.Vector3();
+let lastPosition = player.collider.position.clone();
+const velocityEMASmoothing = 6; // responsiveness (higher = faster response)
+
+// Ears
+let headBone;
+let earBones = [];
+let earAnimQuats = [];
+let earOffsets = [];
+const earSwingVelocityFactor = 0.1;
+const earSwingHeadRotFactor = 4;
+let lastHeadQuat = new THREE.Quaternion();
+let currentHeadQuat = new THREE.Quaternion();
+let worldHeadDelta = new THREE.Quaternion();
+
 async function loadModel() {
     const glb = await new GLTFLoader().loadAsync('Bucket.glb');
     const playerModel = glb.scene; // Attach scene instead of model to preserve offset from origin
@@ -185,36 +204,72 @@ async function loadModel() {
             tailOffsets.push(new THREE.Quaternion());
         }
     });
+
+    // Find head/ear bones
+    player.model.traverse(obj => {
+    if (obj.isBone) {
+            if (obj.name === "Head") headBone = obj;
+            if (obj.name.includes("Ear")) {
+                earBones.push(obj);
+                earAnimQuats.push(obj.quaternion.clone());
+                earOffsets.push(new THREE.Quaternion());
+            }
+        }
+    });
+    headBone.getWorldQuaternion(lastHeadQuat);
     
     player.collider.material.opacity = 0;
     player.active = true; // TODO: Maybe check if level is ready first in case model loads before level?
 }
 await loadModel();
 
-const idleClip = animations["Idle"];
-if (idleClip) mixer.clipAction(idleClip).play();
-
-let localVelocity;
-let lastPosition = player.collider.position.clone();
-
 window.addEventListener("update", e => {
     if (!player.model) return;
     
     const delta = e.detail.delta;
     
-    // Local velocity
+    // Clear dynamic bone transforms before updating animation
+    tailBones.forEach((bone, i) => bone.quaternion.copy(tailAnimQuats[i]));
+    earBones.forEach((bone, i) => bone.quaternion.copy(earAnimQuats[i]));
+    if (mixer) {
+        mixer.update(delta);
+        player.model.updateMatrixWorld(true);
+    }
+
+    // Get local velocity
     localVelocity = player.collider.position.clone().sub(lastPosition).divideScalar(delta).applyQuaternion(player.collider.quaternion.clone().invert());
     lastPosition.copy(player.collider.position);
+    // Exponential Moving Average
+    const alpha = 1 - Math.exp(-velocityEMASmoothing * delta);
+    localVelocity.lerp(localVelocity, alpha);
 
-    tailBones.forEach((bone, i) => bone.quaternion.copy(tailAnimQuats[i])); // Clear swing before updating animation
-    if (mixer) mixer.update(delta);
-    // Add swing to animation
+    // Add tail swing to animation
     tailBones.forEach((bone, i) => {
-        tailAnimQuats[i].copy(bone.quaternion);
+        tailAnimQuats[i].copy(bone.quaternion); // Store animation pose before applying dynamic offset
 
-        const swingMagnitude = 0.05;
-        const swingQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler((localVelocity.z - localVelocity.y) * swingMagnitude / 2, localVelocity.x * swingMagnitude, localVelocity.x * swingMagnitude));
+        const swingQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler((localVelocity.z - localVelocity.y) * tailSwingMagnitude / 2, localVelocity.x * tailSwingMagnitude, localVelocity.x * tailSwingMagnitude));
         tailOffsets[i].slerp(swingQuat, rotationSpeed);
         bone.quaternion.multiply(tailOffsets[i]);
     });
+
+    // Get head rotation delta
+    headBone.getWorldQuaternion(currentHeadQuat); // Get world space head rotation
+    worldHeadDelta.copy(currentHeadQuat).multiply(lastHeadQuat.clone().invert()); // Get delta
+    lastHeadQuat.copy(currentHeadQuat); // Store current head rotation for next frame
+    // Convert world delta to euler head space
+    const invHeadWorld = currentHeadQuat.clone().invert();
+    const headRotDelta = new THREE.Euler().setFromQuaternion(invHeadWorld.clone().multiply(worldHeadDelta).multiply(currentHeadQuat));
+
+    // Add ear swing to animation
+    earBones.forEach((bone, i) => {
+        earAnimQuats[i].copy(bone.quaternion); // Store animation pose before applying dynamic offset
+
+        const dir = bone.name === "EarR" ? 1 : -1;
+        const swingQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler((-localVelocity.z * earSwingVelocityFactor) + (-headRotDelta.x * earSwingHeadRotFactor) + (-headRotDelta.y * earSwingHeadRotFactor * dir), 0, localVelocity.y * earSwingVelocityFactor * dir));
+        earOffsets[i].slerp(swingQuat, 0.1);
+        bone.quaternion.multiply(earOffsets[i]);
+    });
 });
+
+const idleClip = animations["Idle"];
+if (idleClip) mixer.clipAction(idleClip).play();
