@@ -226,7 +226,8 @@ await loadModel();
 window.addEventListener("update", e => {
     if (!player.model) return;
     
-    const delta = e.detail.delta;
+    // Guard against 0 delta which can lead to NaNs in velocity and break the animation
+    const delta = Math.max(e.detail.delta, 1e-4);
     
     // Clear dynamic bone transforms before updating animation
     tailBones.forEach((bone, i) => bone.quaternion.copy(tailAnimQuats[i]));

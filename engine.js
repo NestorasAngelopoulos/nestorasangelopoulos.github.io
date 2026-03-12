@@ -26,6 +26,8 @@ html, body {
 `;
 document.head.appendChild(style);
 
+HTMLElement.prototype.scrollIntoView = function() {};
+
 // RENDERERS
 
 const rendererCSS3D = new CSS3DRenderer();
@@ -87,7 +89,7 @@ window.cameraControls = cameraControls;
 window.addEventListener('resize', function() {
     setTimeout(function() {
         camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
+        camera.updateProjectionMatrix(true);
         renderer.setSize(window.innerWidth, window.innerHeight);
         rendererCSS3D.setSize(window.innerWidth, window.innerHeight);
         renderTarget.setSize(window.innerWidth * dpr / window.pixelScale, window.innerHeight * dpr / window.pixelScale);
@@ -159,7 +161,6 @@ var lastTick = 0;
 var lastPixelScale = window.pixelScale;
 // This is the basic "update" or "game" loop (t is increased with time)
 function animate(t = 0) {
-
     var delta = (t - lastTick) / 1000;
     lastTick = t;
 
@@ -268,6 +269,7 @@ function createPanel(source, width = 4.8, height = 2.7, position = new THREE.Vec
     iframe3D.position.copy(position);
     iframe3D.rotation.set(THREE.MathUtils.degToRad(rotation.x), THREE.MathUtils.degToRad(rotation.y), THREE.MathUtils.degToRad(rotation.z));
     scene.add(iframe3D);
+
     // Occlusion
     // (very usefull: https://gotoo.co/demo/elizabeth/gotoo5th3D/HtmlWith3D)
     const geometry = new THREE.PlaneGeometry(width, height);
